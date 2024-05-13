@@ -16,5 +16,5 @@ docker run -it \
     --volume="$XAUTH:$XAUTH" \
     --net=host \
     --privileged \
-    dndqodqks/ubuntu-ros2-gazebo-realsense:$2 \
+    dndqodqks/arm64v8-ubuntu-ros2-realsense:$2 \
     bash
