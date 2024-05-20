@@ -8,13 +8,13 @@ XAUTH=/tmp/.docker.xauth
 
 docker run -it \
     --name=$1 \
-    --env="DISPLAY=$DISPLAY" \
+    --net=host \
+    -e DISPLAY=unix$DISPLAY \
     --env="QT_X11_NO_MITSHM=1" \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --volume="/dev:/dev" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    --net=host \
     --privileged \
     dndqodqks/arm64v8-ubuntu-ros2-realsense:$2 \
     bash
