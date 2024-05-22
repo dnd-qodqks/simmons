@@ -17,6 +17,10 @@ void MainWindow::initUi()
 {
   QIcon icon("://ros-icon.png");
   this->setWindowIcon(icon);
+
+  setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
+  
+  setStatusBar(nullptr);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
