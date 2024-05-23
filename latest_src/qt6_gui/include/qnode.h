@@ -18,6 +18,7 @@ public:
     qnode();
     ~qnode() override;
     void run() override;
+    int mode = 0;
 
 private:
     std::shared_ptr<rclcpp::Node> node_;

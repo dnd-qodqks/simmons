@@ -8,6 +8,8 @@ MainWindow::MainWindow(QWidget *parent)
 
   initUi();
 
+  QMetaObject::connectSlotsByName(this);
+
   commNode.set_image_label(ui->image_label);
 
   commNode.start();
@@ -21,6 +23,23 @@ void MainWindow::initUi()
   setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
   
   setStatusBar(nullptr);
+}
+
+void MainWindow::on_Color_clicked()
+{
+  // qDebug() << "on_Color_clicked()";
+  commNode.mode = 1;
+}
+
+void MainWindow::on_Depth_clicked()
+{
+  // qDebug() << "on_Depth_clicked()";
+  commNode.mode = 2;
+}
+
+void MainWindow::on_Quit_clicked()
+{
+  this->close();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

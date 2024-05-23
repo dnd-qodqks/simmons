@@ -27,6 +27,9 @@ public:
   qnode commNode;
 
 public slots:
+  void on_Color_clicked();
+  void on_Depth_clicked();
+  void on_Quit_clicked();
 
 private:
   void initUi();

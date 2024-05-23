@@ -9,8 +9,8 @@ qnode::qnode()
 
     node_ = rclcpp::Node::make_shared("img_sub_node");
 
-    image_subscription_ = node_->create_subscription<sensor_msgs::msg::Image>(
-            "/robot/D435/color/image_raw", 10, std::bind(&qnode::imageCallback, this, std::placeholders::_1));
+    image_sub_ = node_->create_subscription<sensor_msgs::msg::Image>(
+            "/yolo/dbg_image", 10, std::bind(&qnode::imageCallback, this, std::placeholders::_1));
 }
 
 void qnode::set_image_label(QLabel* image_label)
@@ -21,10 +21,14 @@ void qnode::set_image_label(QLabel* image_label)
 void qnode::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
     // qDebug() << "Received image, width:" << msg->width << ", height:" << msg->height;
+    
+    // qDebug() << "mode:" << mode;
 
-    QImage image(msg->data.data(), msg->width, msg->height, QImage::Format_RGB888);
-
-    QMetaObject::invokeMethod(this, "updateImage", Qt::QueuedConnection, Q_ARG(QImage, image));
+    if (mode == 1)
+    {
+        QImage image(msg->data.data(), msg->width, msg->height, QImage::Format_RGB888);
+        QMetaObject::invokeMethod(this, "updateImage", Qt::QueuedConnection, Q_ARG(QImage, image));
+    }
 }
 
 void qnode::updateImage(const QImage& image)
@@ -53,7 +57,8 @@ qnode::~qnode()
     if (node_) {
         node_.reset();
     }
-    if (image_subscription_) {
-        image_subscription_.reset();
+
+    if (image_sub_) {
+        image_sub_.reset();
     }
 }

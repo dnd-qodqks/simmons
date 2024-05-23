@@ -17,7 +17,7 @@
    <widget class="QPushButton" name="Color">
     <property name="geometry">
      <rect>
-      <x>660</x>
+      <x>665</x>
       <y>20</y>
       <width>120</width>
       <height>25</height>
@@ -36,8 +36,8 @@
    <widget class="QLabel" name="image_label">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>0</y>
+      <x>10</x>
+      <y>10</y>
       <width>640</width>
       <height>480</height>
      </rect>
@@ -55,7 +55,7 @@
    <widget class="QPushButton" name="Depth">
     <property name="geometry">
      <rect>
-      <x>660</x>
+      <x>665</x>
       <y>70</y>
       <width>120</width>
       <height>25</height>
@@ -74,7 +74,7 @@
    <widget class="QLabel" name="fpsLabel">
     <property name="geometry">
      <rect>
-      <x>660</x>
+      <x>665</x>
       <y>120</y>
       <width>120</width>
       <height>25</height>
@@ -90,8 +90,8 @@
    <widget class="QPushButton" name="Quit">
     <property name="geometry">
      <rect>
-      <x>660</x>
-      <y>440</y>
+      <x>665</x>
+      <y>460</y>
       <width>120</width>
       <height>25</height>
      </rect>

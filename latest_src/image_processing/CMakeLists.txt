@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(cloud_processing)
+project(image_processing)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -26,13 +26,13 @@ include_directories(${PCL_INCLUDE_DIRS} include)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable(cloud_filter src/main.cpp)
-target_include_directories(cloud_filter PUBLIC
+add_executable(${PROJECT_NAME} src/main.cpp)
+target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(cloud_filter PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(${PROJECT_NAME} PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
-  cloud_filter
+  ${PROJECT_NAME}
   rclcpp
   sensor_msgs
   result_msgs
@@ -41,10 +41,10 @@ ament_target_dependencies(
   cv_bridge
 )
 
-install(TARGETS cloud_filter
+install(TARGETS ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
-target_link_libraries(cloud_filter
+target_link_libraries(${PROJECT_NAME}
   ${PCL_LIBRARIES}
   ${OpenCV_LIBS}
 )
