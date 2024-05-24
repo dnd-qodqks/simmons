@@ -11,6 +11,7 @@ MainWindow::MainWindow(QWidget *parent)
   QMetaObject::connectSlotsByName(this);
 
   commNode.set_image_label(ui->image_label);
+  commNode.set_fps_label(ui->fpsLabel);
 
   commNode.start();
 }
@@ -28,12 +29,14 @@ void MainWindow::initUi()
 void MainWindow::on_Color_clicked()
 {
   // qDebug() << "on_Color_clicked()";
+  ui->fpsLabel->setText("Mode 1");
   commNode.mode = 1;
 }
 
 void MainWindow::on_Depth_clicked()
 {
   // qDebug() << "on_Depth_clicked()";
+  ui->fpsLabel->setText("Mode 2");
   commNode.mode = 2;
 }
 

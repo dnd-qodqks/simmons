@@ -22,11 +22,13 @@ public:
 
 private:
     std::shared_ptr<rclcpp::Node> node_;
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_subscription_;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     QLabel* image_label_;
+    QLabel* fps_label_;
 
 public slots:
     void set_image_label(QLabel* image_label);
+    void set_fps_label(QLabel* fps_label);
     void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg);
     void updateImage(const QImage& image);
     

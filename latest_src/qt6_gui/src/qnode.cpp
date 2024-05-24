@@ -18,6 +18,12 @@ void qnode::set_image_label(QLabel* image_label)
     image_label_ = image_label;
 }
 
+void qnode::set_fps_label(QLabel* fps_label)
+{
+    fps_label_ = fps_label;
+    fps_label_->setText("Mode 0");
+}
+
 void qnode::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
     // qDebug() << "Received image, width:" << msg->width << ", height:" << msg->height;
@@ -35,6 +41,7 @@ void qnode::updateImage(const QImage& image)
 {
     // QLabel에 이미지 출력
     image_label_->setPixmap(QPixmap::fromImage(image));
+    fps_label_->setText("Mode 1");
 }
 
 void qnode::run()
