@@ -17,6 +17,7 @@ find_package(std_msgs REQUIRED)
 find_package(Qt6 COMPONENTS Core Gui Widgets Network REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core)
+find_package(result_msgs REQUIRED)
 
 # Globbing Source Files
 file(GLOB PRO_SOURCE_DIR RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS  src/*.cpp)
@@ -32,7 +33,8 @@ qt6_add_resources(QT_RESOUCE_HPP ${PRO_RESOURCE_DIR})
 include_directories(
 	${PROJECT_SOURCE_DIR}/include
 	${CMAKE_CURRENT_BINARY_DIR}
-	${OpenCV_INCLUDE_DIRS})
+	${OpenCV_INCLUDE_DIRS}
+  ${result_msgs_INCLUDE_DIRS})
 
 # include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -52,7 +54,7 @@ ament_target_dependencies(${PROJECT_NAME}
   cv_bridge
 )
 
-target_link_libraries(${PROJECT_NAME} Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network ${OpenCV_LIBS} ${result_msgs_LIBRARIES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

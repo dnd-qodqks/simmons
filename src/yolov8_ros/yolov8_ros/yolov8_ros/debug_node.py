@@ -97,10 +97,8 @@ class DebugNode(Node):
         # pub min/max x,y
         if label == "person":
             bbox_msg = Bbox()
-            bbox_msg.min_x = min_pt[0]
-            bbox_msg.min_y = min_pt[1]
-            bbox_msg.max_x = max_pt[0]
-            bbox_msg.max_y = max_pt[1]
+            bbox_msg.center_x = int(box_msg.center.position.x)
+            bbox_msg.center_y = int(box_msg.center.position.y)
             self.bbox_pub_.publish(bbox_msg)
 
         # draw box

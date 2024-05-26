@@ -15,6 +15,9 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Bbox.msg"
+  "msg/Force.msg"
+  "msg/Mode.msg"
+  "msg/Person.msg"
   DEPENDENCIES std_msgs
  )
 

@@ -19,6 +19,13 @@ MainWindow::MainWindow(QWidget *parent)
 void MainWindow::initUi()
 {
   QIcon icon("://ros-icon.png");
+
+  if (icon.isNull()) {
+      qDebug() << "Failed to load the icon.";
+  } else {
+      qDebug() << "The icon was loaded successfully.";
+  }
+
   this->setWindowIcon(icon);
 
   setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
@@ -30,14 +37,14 @@ void MainWindow::on_Color_clicked()
 {
   // qDebug() << "on_Color_clicked()";
   ui->fpsLabel->setText("Mode 1");
-  commNode.mode = 1;
+  commNode.mode_info.mode = 1;
 }
 
 void MainWindow::on_Depth_clicked()
 {
   // qDebug() << "on_Depth_clicked()";
   ui->fpsLabel->setText("Mode 2");
-  commNode.mode = 2;
+  commNode.mode_info.mode = 2;
 }
 
 void MainWindow::on_Quit_clicked()
