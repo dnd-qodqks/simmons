@@ -6,9 +6,19 @@
 #include <string.h>
 #include <termios.h>
 #include <chrono>
+#include <cstdint>
+#include <cstring>
+#include <cstdio>
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
+ 
+#define MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
+#define MAKEDWORD(a, b) ((uint32_t)(((uint16_t)(((uint64_t)(a)) & 0xffff)) | ((uint32_t)((uint16_t)(((uint64_t)(b)) & 0xffff))) << 16))
+#define LOWORD(l)       ((uint16_t)(((uint64_t)(l)) & 0xffff))
+#define HIWORD(l)       ((uint16_t)((((uint64_t)(l)) >> 16) & 0xffff))
+#define LOBYTE(w)       ((uint8_t)(((uint64_t)(w)) & 0xff))
+#define HIBYTE(w)       ((uint8_t)((((uint64_t)(w)) >> 8) & 0xff))
 
 class SerialModule : public rclcpp::Node {
   public:
@@ -76,13 +86,41 @@ class SerialModule : public rclcpp::Node {
   
   private:
     void publish_message() {
-      int length = 1;
-      uint8_t data[1] = {7};
-      writePacket(length, data);
-
-      uint8_t rx_data[1] = {0};
+      float data1 = 123456.789;
+      float data2 = 6.9;
+      float data3 = 34.78;
+      int length = 12;
+      uint8_t tx_data[12];
+      
+      floatToByteArray(data1, tx_data);
+      floatToByteArray(data2, &tx_data[4]);
+      floatToByteArray(data3, &tx_data[8]);
+      
+      writePacket(length, tx_data);
+      //RCLCPP_INFO(this->get_logger(), "tx_data: '%u', '%u', '%u', '%u'", tx_data[0], tx_data[1], tx_data[2], tx_data[3]);
+      
+      uint8_t rx_data[12] = {0};
       readPacket(length, rx_data);
-      RCLCPP_INFO(this->get_logger(), "rx_data: '%u'", rx_data[0]);
+      //RCLCPP_INFO(this->get_logger(), "rx_data: '%u', '%u', '%u', '%u'", rx_data[0], rx_data[1], rx_data[2], rx_data[3]);
+      
+      data1 = byteArrayToFloat(rx_data);
+      data2 = byteArrayToFloat(&rx_data[4]);
+      data3 = byteArrayToFloat(&rx_data[8]);
+      
+      RCLCPP_INFO(this->get_logger(), "data: '%f', '%f', '%f'", data1, data2, data3);
+      
+      /* // Used int
+      uint8_t tx_data[4] = { LOBYTE(LOWORD(data)), HIBYTE(LOWORD(data)), LOBYTE(HIWORD(data)), HIBYTE(HIWORD(data)) };
+      writePacket(length, tx_data);
+      RCLCPP_INFO(this->get_logger(), "tx_data: '%x', '%x', '%x', '%x'", tx_data[0], tx_data[1], tx_data[2], tx_data[3]);
+
+      uint8_t rx_data[4] = {0};
+      readPacket(length, rx_data);
+      
+      data = MAKEDWORD(MAKEWORD(rx_data[0], rx_data[1]), MAKEWORD(rx_data[2], rx_data[3]));
+      RCLCPP_INFO(this->get_logger(), "rx_data: '%u', '%u', '%u', '%u'", rx_data[0], rx_data[1], rx_data[2], rx_data[3]);
+      RCLCPP_INFO(this->get_logger(), "data: '%f'", data);
+      */
     }
 
     void serial_test() {
@@ -107,6 +145,30 @@ class SerialModule : public rclcpp::Node {
       RCLCPP_INFO(this->get_logger(), "buffer: '%s'", buffer);
     }
 
+    void floatToByteArray(float value, uint8_t* buffer) {
+      // float 변수의 메모리 주소를 unsigned char 포인터로 변환
+      unsigned char* bytes = reinterpret_cast<unsigned char*>(&value);
+    
+      // 각 바이트를 uint8_t 배열에 저장
+      for (size_t i = 0; i < sizeof(value); ++i) {
+        buffer[i] = bytes[i];
+      }
+    }
+
+    float byteArrayToFloat(const uint8_t* array) {
+      unsigned long tmp;
+      float result;
+      
+      tmp = ((array[3] & 0xFF) << 24);
+      tmp += ((array[2] & 0xFF) << 16);
+      tmp += ((array[1] & 0xFF) << 8);
+      tmp += array[0] & 0xFF;
+      
+      result = *((float*) & tmp);
+      
+      return result;
+    }
+
     void writePacket(uint8_t length, uint8_t *data) {
       uint8_t *txpacket = (uint8_t *)malloc(length+5);
 
@@ -127,7 +189,7 @@ class SerialModule : public rclcpp::Node {
     }
 
     void readPacket(uint8_t length, uint8_t *data) {
-      uint8_t *rxpacket = (uint8_t *)malloc(8);
+      uint8_t *rxpacket = (uint8_t *)malloc(20);
       int result = 0;
 
       if (rxpacket == NULL)
@@ -194,10 +256,11 @@ class SerialModule : public rclcpp::Node {
             if (rxpacket[idx] == 0xFF && rxpacket[idx+1] == 0xFF)
               break;
           }
-
+	  
+	  
           if (idx == 0)   // found at the beginning of the packet
           {
-            if (rxpacket[3] > 7)  // unavailable Length 7: RXPACKET_MAX_LEN
+            if (rxpacket[3] > 20)  // unavailable Length 20: RXPACKET_MAX_LEN
             {
                 // remove the first byte in the packet
                 for (uint16_t s = 0; s < rx_length - 1; s++)
