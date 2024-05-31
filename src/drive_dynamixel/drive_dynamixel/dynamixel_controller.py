@@ -5,19 +5,19 @@ import threading
 import time
 import os
 from dynamixel_sdk import *
-from result_msgs.msg import Force
+# from result_msgs.msg import Force
 
 class DynamixelController(Node):
     def __init__(self):
         super().__init__('dynamixel_controller')
 
-        self.sub_force_info_ = self.create_subscription(
-            Force,
-            'force_info',
-            self.force_info_callback,
-            10)
+        # self.sub_force_info_ = self.create_subscription(
+        #     Force,
+        #     'force_info',
+        #     self.force_info_callback,
+        #     10)
         
-        self.sub_force_info_  # prevent unused variable warning
+        # self.sub_force_info_  # prevent unused variable warning
 
         self.DEBUG = False
 
@@ -72,11 +72,11 @@ class DynamixelController(Node):
         self.set_dxl_torque(self.TORQUE_ENABLE)
         self.set_dxl_led(self.LED_ENABLE)
         self.set_dxl_profile(self.PROFILE_ACCELERATION, self.PROFILE_VELOCITY)
-        self.set_multi_goal_position()
+        self.set_multi_goal_position([0, 0, 0, 0])
         time.sleep(1.5)
 
         # Test
-        # self.test_sync_bulk(1000)
+        self.test_sync_bulk()
 
     def force_info_callback(self, msg):
         # 각 모터의 각도 계산
@@ -87,9 +87,9 @@ class DynamixelController(Node):
         set_multi_goal_position(goal_postions)
         
         while True:
-            if self.dxl_moving[0] == 0 and 
-               self.dxl_moving[1] == 0 and
-               self.dxl_moving[2] == 0 and
+            if self.dxl_moving[0] == 0 and \
+               self.dxl_moving[1] == 0 and \
+               self.dxl_moving[2] == 0 and \
                self.dxl_moving[3] == 0:
                    break
 
@@ -177,6 +177,7 @@ class DynamixelController(Node):
         # Allocate goal position value into byte array
         for id in self.DXL_ID:
             self.get_logger().debug(f"ID: {id}")
+            self.get_logger().info(f'goal_postions: {goal_postions}')
             self.dxl_goal_position[id] = goal_postions[id]
 
             param_goal_position = [DXL_LOBYTE(DXL_LOWORD(self.dxl_goal_position[id])), 
@@ -234,8 +235,9 @@ class DynamixelController(Node):
             self.get_logger().info(f"successfully read present position, time_take: {time_taken:.5f} [s]")
             self.get_logger().info(f"DXL present position: {self.dxl_present_position}")
 
-    def test_sync_bulk(self, add_goal_postion):
+    def test_sync_bulk(self):
         max_err = 0
+        add_goal_postion = [0, 0, 0, 0]
 
         while True:
             self.set_multi_goal_position(add_goal_postion)
@@ -245,26 +247,25 @@ class DynamixelController(Node):
 
                 self.get_logger().info(f"--- DXL goal position: {self.dxl_goal_position} ---")
                 self.get_logger().info(f"--- DXL pres position: {self.dxl_present_position} ---")
-
-                cnt = 0
-                for id in self.DXL_ID:
-                    position_error = abs(self.dxl_goal_position[id] - self.dxl_present_position[id])
-                    self.get_logger().info(f"[ID: {id}] position_error: {position_error}")
-
-                    if position_error <= self.DXL_MOVING_STATUS_THRESHOLD:
-                        cnt += 1
+                self.get_logger().info(f"--- DXL moving: {self.dxl_moving} ---")
                     
-                    if id == 2:
-                        if position_error > max_err:
-                            max_err = position_error
-                        self.get_logger().info(f"[ID: {id}] max_err: {max_err}")
-
-                if cnt == len(self.DXL_ID):
+                self.check_moving_pram()
+                
+                if self.dxl_moving[0] == 0 and self.dxl_moving[1] == 0 and self.dxl_moving[2] == 0 and self.dxl_moving[3] == 0:
                     break
 
-            if self.dxl_goal_position[0] >= 4095:
+            for id in self.DXL_ID:
+                add_goal_postion[id] += 100
+            
+            while True:
+                cnt = 0
+                
                 for id in self.DXL_ID:
-                    self.dxl_goal_position[id] = 0
+                    if add_goal_postion[id] >= 4095:
+                        cnt += 1
+                        add_goal_postion[id] += 100
+
+                if cnt == 0: break
 
     def check_moving_pram(self):
         for id in self.DXL_ID:
