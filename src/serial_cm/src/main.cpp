@@ -12,7 +12,8 @@
 #include <poll.h>
 
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp>
+#include "result_msgs/msg/mode.hpp"
+#include "result_msgs/msg/force.hpp"
 
 #define LOWORD(l)       ((uint16_t)(((uint64_t)(l)) & 0xffff))
 #define HIWORD(l)       ((uint16_t)((((uint64_t)(l)) >> 16) & 0xffff))
@@ -24,12 +25,20 @@
 class SerialModule : public rclcpp::Node {
   public:
     SerialModule() : Node("serial_node") {
-      force_info_pub_ = this->create_publisher<std_msgs::msg::String>(
+      force_info_pub_ = this->create_publisher<result_msgs::msg::Force>(
                 "/force_info", 10);
-                
-      timer_ = this->create_wall_timer(
-          std::chrono::milliseconds(10),
-          std::bind(&SerialModule::publish_message, this));
+      
+      mode_sub_ = this->create_subscription<result_msgs::msg::Mode>(
+                "mode_info", 10, 
+                std::bind(&SerialModule::modeCallback, this, std::placeholders::_1));
+      
+      tx_timer_ = this->create_wall_timer(
+                    std::chrono::milliseconds(10),
+                    std::bind(&SerialModule::uart_tx, this));
+
+      rx_timer_ = this->create_wall_timer(
+                    std::chrono::milliseconds(10),
+                    std::bind(&SerialModule::uart_rx, this));
           
       struct termios options;
       memset (&options, 0, sizeof options);
@@ -77,7 +86,12 @@ class SerialModule : public rclcpp::Node {
     }
   
   private:
-    void publish_message() {
+    void modeCallback(const result_msgs::msg::Mode msg) {
+      mode_ = msg.mode;
+      RCLCPP_INFO(this->get_logger(), "Mode: %d", mode_);
+    }
+
+    void uart_tx() {
       // TX ---------------------------------
       float person_length = 1.2;
       float person_degree = 91.3;
@@ -89,7 +103,9 @@ class SerialModule : public rclcpp::Node {
       
       writePacket(length, tx_data);
       RCLCPP_INFO(this->get_logger(), "writePacket!!");
-      
+    }
+    
+    void uart_rx() {
       // RX ---------------------------------
       uint8_t *rx_data = (uint8_t *)malloc(12);
       uint8_t total_length = RXPACKET_MAX_LEN;
@@ -111,6 +127,14 @@ class SerialModule : public rclcpp::Node {
       float FY = byteArrayToFloat(&rx_data[4]);
       float FZ = byteArrayToFloat(&rx_data[8]);
       
+      float max = 10000.0, min = -max;
+      if (FX > 10000.0) FX = max;
+      if (FY > 10000.0) FY = max;
+      if (FZ > 10000.0) FZ = max;
+      if (FX < -10000.0) FX = min;
+      if (FY < -10000.0) FY = min;
+      if (FZ < -10000.0) FZ = min;
+
       RCLCPP_INFO(this->get_logger(), "FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
     }
     
@@ -163,7 +187,7 @@ class SerialModule : public rclcpp::Node {
       
       txpacket[0] = 0xFF;
       txpacket[1] = 0xFF;
-      txpacket[2] = 0x01;
+      txpacket[2] = mode_ - 1;
 
       for (int i = 0; i < total_packet_length; i++)
         checksum += txpacket[i];
@@ -223,10 +247,13 @@ class SerialModule : public rclcpp::Node {
       return 1;
     }
 
+  int mode_;
   int serial_port;
   struct pollfd fds[1];
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr force_info_pub_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Publisher<result_msgs::msg::Force>::SharedPtr force_info_pub_;
+  rclcpp::Subscription<result_msgs::msg::Mode>::SharedPtr mode_sub_;
+  rclcpp::TimerBase::SharedPtr tx_timer_;
+  rclcpp::TimerBase::SharedPtr rx_timer_;
 };
 
 int main(int argc, char** argv) {

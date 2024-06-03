@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(result_msgs REQUIRED)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 
@@ -16,6 +17,7 @@ ament_target_dependencies(
   ${PROJECT_NAME}
   rclcpp
   std_msgs
+  result_msgs
 )
 
 install(TARGETS ${PROJECT_NAME}
