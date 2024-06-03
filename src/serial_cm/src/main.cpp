@@ -196,6 +196,7 @@ class SerialModule : public rclcpp::Node {
 
       if (mode_ == 1)
       {
+        /*
         checksum = ~(uint8_t)(txpacket[0]
                             + txpacket[1]
                             + txpacket[2]
@@ -209,14 +210,26 @@ class SerialModule : public rclcpp::Node {
                             + txpacket[10]
                             + txpacket[11]
                             + txpacket[12]);
+        */
+        
+        for (int i = 0; i < 13; i++)
+          checksum = addByte(checksum, txpacket[i]);
+        checksum = ~checksum;
+        
       }
       else if (mode_ == 2)
       {
+        /*
         checksum = ~(uint8_t)(txpacket[0]
                             + txpacket[1]
                             + txpacket[2]
                             + txpacket[3]
                             + txpacket[4]);
+        */
+        
+        for (int i = 0; i < 6; i++)
+          checksum = addByte(checksum, txpacket[i]);
+        checksum = ~checksum;
       }
       
       // for (int i = 0; i < total_packet_length; i++)
@@ -261,8 +274,28 @@ class SerialModule : public rclcpp::Node {
           }
           
           for (int i = 0; i < total_length-1; i++)
-            checksum += rxpacket[i];
+            checksum = addByte(checksum, rxpacket[i]);
           checksum = ~checksum;
+          
+          /*
+          checksum = ~(uint8_t)(rxpacket[0]
+                              + rxpacket[1]
+                              + rxpacket[2]
+                              + rxpacket[3]
+                              + rxpacket[4]
+                              + rxpacket[5]
+                              + rxpacket[6]
+                              + rxpacket[7]
+                              + rxpacket[8]
+                              + rxpacket[9]
+                              + rxpacket[10]
+                              + rxpacket[11]
+                              + rxpacket[12]
+                              + rxpacket[13]
+                              + rxpacket[14]
+                              + rxpacket[15]
+                              + rxpacket[16]);
+          */
           
           if (rxpacket[total_length-1] != checksum)
           {
@@ -275,10 +308,24 @@ class SerialModule : public rclcpp::Node {
             data[i] = rxpacket[i+4];
         }
       }
-     
+      
       return 1;
     }
-
+    
+    uint8_t addByte(uint8_t a, uint8_t b)
+    {
+      while (b != 0)
+      {
+      	uint8_t carry = a & b; // AND
+      	
+      	a = a ^ b; // XOR
+      	
+      	b = carry << 1; // Shift
+      }
+      
+      return a;
+    }
+    
   int mode_ = 0;
   int serial_port;
   struct pollfd fds[1];
