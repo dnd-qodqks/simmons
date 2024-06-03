@@ -78,6 +78,19 @@ class SerialModule : public rclcpp::Node {
   
   private:
     void publish_message() {
+      // TX ---------------------------------
+      float person_length = 1.2;
+      float person_degree = 91.3;
+      uint8_t length = 8;
+      uint8_t tx_data[8];
+      
+      floatToByteArray(person_length, tx_data);
+      floatToByteArray(person_degree, &tx_data[4]);
+      
+      writePacket(length, tx_data);
+      RCLCPP_INFO(this->get_logger(), "writePacket!!");
+      
+      // RX ---------------------------------
       uint8_t *rx_data = (uint8_t *)malloc(12);
       uint8_t total_length = RXPACKET_MAX_LEN;
       uint8_t result = 0;
@@ -101,11 +114,15 @@ class SerialModule : public rclcpp::Node {
       RCLCPP_INFO(this->get_logger(), "FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
     }
     
-    /*
     void floatToByteArray(float value, uint8_t* buffer) {
-      
+      // float 변수의 메모리 주소를 unsigned char 포인터로 변환
+      unsigned char* bytes = reinterpret_cast<unsigned char*>(&value);
+    
+      // 각 바이트를 uint8_t 배열에 저장
+      for (size_t i = 0; i < sizeof(value); ++i) {
+        buffer[i] = bytes[i];
+      }
     }
-    */
 
     float byteArrayToFloat(const uint8_t* array) {
       uint32_t tmp;
@@ -121,10 +138,46 @@ class SerialModule : public rclcpp::Node {
       return value;
     }
 
-    /*
     void writePacket(uint8_t length, uint8_t *data) {
+      uint8_t *txpacket = (uint8_t *)malloc(length+5);
+
+      if (txpacket == NULL)
+        return;
+
+      txpacket[3] = length;
+
+      for (uint8_t s = 0; s < length; s++)
+      {
+        txpacket[4+s] = data[s];
+      }
+
+      txPacket(txpacket);
+
+      free(txpacket);
     }
-    */
+    
+    void txPacket(uint8_t *txpacket) {
+      uint8_t checksum = 0;
+      uint8_t total_packet_length = txpacket[3] + 4; // 4: HEADER0 HEADER1 FLAG LENGTH
+      uint8_t written_packet_length = 0;
+      
+      txpacket[0] = 0xFF;
+      txpacket[1] = 0xFF;
+      txpacket[2] = 0x01;
+
+      for (int i = 0; i < total_packet_length; i++)
+        checksum += txpacket[i];
+      checksum = ~checksum;
+
+      tcflush(serial_port, TCIFLUSH);
+
+      for (int i = 0; i < total_packet_length; i++)
+        RCLCPP_DEBUG(this->get_logger(), "txpacket[%d]: %u", i, txpacket[i]);
+
+      written_packet_length = write(serial_port, txpacket, total_packet_length);
+
+      RCLCPP_DEBUG(this->get_logger(), "TX Packet Success!! written_packet_length: %u", written_packet_length);
+    }
     
     int readPacket(uint8_t *data, uint8_t total_length) {
       uint8_t *rxpacket = (uint8_t *)malloc(RXPACKET_MAX_LEN);
