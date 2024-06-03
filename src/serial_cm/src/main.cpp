@@ -1,4 +1,4 @@
- #include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -168,13 +168,18 @@ class SerialModule : public rclcpp::Node {
       if (txpacket == NULL)
         return;
 
-      txpacket[3] = length;
+      if (mode_ == 1) {
+        txpacket[3] = length;
 
-      for (uint8_t s = 0; s < length; s++)
-      {
-        txpacket[4+s] = data[s];
+        for (uint8_t s = 0; s < length; s++)
+        {
+          txpacket[4+s] = data[s];
+        }
       }
-
+      else if (mode_ == 2) {
+        txpacket[3] = 0;
+      }
+      
       txPacket(txpacket);
 
       free(txpacket);
@@ -182,16 +187,43 @@ class SerialModule : public rclcpp::Node {
     
     void txPacket(uint8_t *txpacket) {
       uint8_t checksum = 0;
-      uint8_t total_packet_length = txpacket[3] + 4; // 4: HEADER0 HEADER1 FLAG LENGTH
+      uint8_t total_packet_length = txpacket[3] + 5; // 4: HEADER0 HEADER1 FLAG LENGTH CHECKSUM
       uint8_t written_packet_length = 0;
       
       txpacket[0] = 0xFF;
       txpacket[1] = 0xFF;
       txpacket[2] = mode_ - 1;
 
-      for (int i = 0; i < total_packet_length; i++)
-        checksum += txpacket[i];
-      checksum = ~checksum;
+      if (mode_ == 1)
+      {
+        checksum = ~(uint8_t)(txpacket[0]
+                            + txpacket[1]
+                            + txpacket[2]
+                            + txpacket[3]
+                            + txpacket[4]
+                            + txpacket[5]
+                            + txpacket[6]
+                            + txpacket[7]
+                            + txpacket[8]
+                            + txpacket[9]
+                            + txpacket[10]
+                            + txpacket[11]
+                            + txpacket[12]);
+      }
+      else if (mode_ == 2)
+      {
+        checksum = ~(uint8_t)(txpacket[0]
+                            + txpacket[1]
+                            + txpacket[2]
+                            + txpacket[3]
+                            + txpacket[4]);
+      }
+      
+      // for (int i = 0; i < total_packet_length; i++)
+      //   checksum += txpacket[i];
+      // checksum = ~checksum;
+
+      txpacket[total_packet_length-1] = checksum;
 
       tcflush(serial_port, TCIFLUSH);
 
@@ -247,7 +279,7 @@ class SerialModule : public rclcpp::Node {
       return 1;
     }
 
-  int mode_;
+  int mode_ = 0;
   int serial_port;
   struct pollfd fds[1];
   rclcpp::Publisher<result_msgs::msg::Force>::SharedPtr force_info_pub_;
