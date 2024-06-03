@@ -107,7 +107,7 @@ class SerialModule : public rclcpp::Node {
     
     void uart_rx() {
       // RX ---------------------------------
-      uint8_t *rx_data = (uint8_t *)malloc(12);
+      uint8_t rx_data[12] = { 0 };
       uint8_t total_length = RXPACKET_MAX_LEN;
       uint8_t result = 0;
       
@@ -236,7 +236,7 @@ class SerialModule : public rclcpp::Node {
     }
     
     int readPacket(uint8_t *data, uint8_t total_length) {
-      uint8_t *rxpacket = (uint8_t *)malloc(RXPACKET_MAX_LEN);
+      uint8_t rxpacket[RXPACKET_MAX_LEN] = { 0 };
       uint8_t rx_length = 0;
       uint8_t checksum  = 0;
       
@@ -271,11 +271,11 @@ class SerialModule : public rclcpp::Node {
             return -2;
           }
 
-	  for (int i = 0; i < rxpacket[3]; i++)
-	    data[i] = rxpacket[i+4];
+          for (int i = 0; i < rxpacket[3]; i++)
+            data[i] = rxpacket[i+4];
         }
       }
-      
+     
       return 1;
     }
 
