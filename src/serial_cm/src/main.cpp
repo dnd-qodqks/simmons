@@ -76,6 +76,9 @@ class SerialModule : public rclcpp::Node {
       
       fds[0].fd = serial_port;
       fds[0].events = POLLRDNORM;
+      
+      //uint8_t txpacket[13] = { 0 };
+      //write(serial_port, txpacket, 13);
     }
     
     ~SerialModule() {
@@ -102,7 +105,7 @@ class SerialModule : public rclcpp::Node {
       floatToByteArray(person_degree, &tx_data[4]);
       
       writePacket(length, tx_data);
-      RCLCPP_INFO(this->get_logger(), "writePacket!!");
+      RCLCPP_INFO(this->get_logger(), "TX) Person Length: %.3f, Person Degree: %.3f", person_length, person_degree);
     }
     
     void uart_rx() {
@@ -135,7 +138,7 @@ class SerialModule : public rclcpp::Node {
       if (FY < -10000.0) FY = min;
       if (FZ < -10000.0) FZ = min;
 
-      RCLCPP_INFO(this->get_logger(), "FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
+      RCLCPP_INFO(this->get_logger(), "RX) FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
     }
     
     void floatToByteArray(float value, uint8_t* buffer) {
@@ -192,7 +195,7 @@ class SerialModule : public rclcpp::Node {
       
       txpacket[0] = 0xFF;
       txpacket[1] = 0xFF;
-      txpacket[2] = mode_ - 1;
+      txpacket[2] = mode_;
 
       if (mode_ == 1)
       {
@@ -215,7 +218,6 @@ class SerialModule : public rclcpp::Node {
         for (int i = 0; i < 13; i++)
           checksum = addByte(checksum, txpacket[i]);
         checksum = ~checksum;
-        
       }
       else if (mode_ == 2)
       {
@@ -230,6 +232,7 @@ class SerialModule : public rclcpp::Node {
         for (int i = 0; i < 6; i++)
           checksum = addByte(checksum, txpacket[i]);
         checksum = ~checksum;
+        
       }
       
       // for (int i = 0; i < total_packet_length; i++)
@@ -238,7 +241,7 @@ class SerialModule : public rclcpp::Node {
 
       txpacket[total_packet_length-1] = checksum;
 
-      tcflush(serial_port, TCIFLUSH);
+      tcflush(serial_port, TCOFLUSH);
 
       for (int i = 0; i < total_packet_length; i++)
         RCLCPP_DEBUG(this->get_logger(), "txpacket[%d]: %u", i, txpacket[i]);
@@ -327,6 +330,7 @@ class SerialModule : public rclcpp::Node {
     }
     
   int mode_ = 0;
+  int pre_mode_ = -1;
   int serial_port;
   struct pollfd fds[1];
   rclcpp::Publisher<result_msgs::msg::Force>::SharedPtr force_info_pub_;
