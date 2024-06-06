@@ -11,20 +11,11 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(result_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(pcl_conversions REQUIRED)
-find_package(PCL 1.13 REQUIRED)
 
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
-
-include_directories(${EIGEN3_INCLUDE_DIR} include)
-
-include_directories(${PCL_INCLUDE_DIRS} include)
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -37,7 +28,6 @@ ament_target_dependencies(
   sensor_msgs
   result_msgs
   visualization_msgs
-  pcl_conversions
   cv_bridge
 )
 
@@ -45,7 +35,6 @@ install(TARGETS ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME}
-  ${PCL_LIBRARIES}
   ${OpenCV_LIBS}
 )
 

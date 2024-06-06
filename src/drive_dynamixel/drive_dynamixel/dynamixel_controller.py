@@ -21,10 +21,6 @@ class DynamixelController(Node):
             self.person_info_callback,
             10)
         
-        # prevent unused variable warning
-        self.sub_force_info_ 
-        self.person_info_sub_
-        
         self.DEBUG = False
 
         # Control table address
@@ -55,7 +51,7 @@ class DynamixelController(Node):
         self.COMM_SUCCESS                = 0                               # Communication Success result value
         self.LEN_MX_GOAL_POSITION        = 4
         self.LEN_MX_PRESENT_POSITION     = 4
-        self.OFFSET                      = [-528, -78, 107, -32]
+        self.OFFSET                      = [-528, -98, 122, -64]
 
         self.portHandler_ = PortHandler(self.DEVICENAME)
         self.portHandler_.setBaudRate(self.BAUDRATE)
@@ -101,18 +97,19 @@ class DynamixelController(Node):
                    break
 
     def person_info_callback(self, msg):
-        length_factor = 1000.0
-        length = msg.length * length_factor
-        degree_factor = 2.0
-        degree = (msg.degree - 90.0) * degree_factor
+        self.get_logger().info(f"length: {msg.length}, degree: {msg.degree}")
+        # length_factor = 1000.0
+        # length = msg.length * length_factor
+        # degree_factor = 2.0
+        # degree = (msg.degree - 90.0) * degree_factor
         
-        steering_info = self.steering_kinematics(length, degree)
+        # steering_info = self.steering_kinematics(length, degree)
         
-        goal_postions = []
-        for radian in steering_info[:-1]:
-            goal_postions.append(math.fabs(int((self.rad2deg(radian) / 90.0) * 2048)))
+        # goal_postions = []
+        # for radian in steering_info[:-1]:
+        #     goal_postions.append(math.fabs(int((self.rad2deg(radian) / 90.0) * 2048)))
         
-        self.set_multi_goal_position(goal_postions)
+        # self.set_multi_goal_position(goal_postions)
         
     def angles2goal_positions(self, angles):
         pass
@@ -215,7 +212,7 @@ class DynamixelController(Node):
         self.groupSyncWrite.clearParam()
 
         while True:
-            self.read_multi_moving()            
+            self.read_multi_moving()
             
             self.get_logger().debug(f'Moving: {self.dxl_moving}')
             
@@ -274,28 +271,6 @@ class DynamixelController(Node):
                         add_goal_postion[id] += 100
 
                 if cnt == 0: break
-
-    def check_moving_pram(self):
-        for id in self.DXL_ID:
-            # Add parameter storage for Dynamixel#ID present position
-            dxl_addparam_result = self.groupBulkRead.addParam(id, self.ADDR_MOVING, 1)
-            if dxl_addparam_result != True:
-                self.get_logger().info(f"[ID:{id:03d}] [Moving] groupBulkRead addparam failed")
-
-            # Bulkread present position
-            dxl_comm_result = self.groupBulkRead.txRxPacket()
-            if dxl_comm_result != self.COMM_SUCCESS:
-                self.get_logger().info(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
-
-            # Check if groupbulkread data of Dynamixel#1 is available
-            dxl_getdata_result = self.groupBulkRead.isAvailable(id, self.ADDR_MOVING, 1)
-            if dxl_getdata_result != True:
-                self.get_logger().info(f"[ID:{id:03d}] [Moving] groupBulkRead getdata failed")
-
-            # Get Dynamixel#1 present position value
-            self.dxl_moving[id] = self.groupBulkRead.getData(id, self.ADDR_MOVING, 1)
-
-        self.groupBulkRead.clearParam()
         
     def deg2rad(self, deg):
         return math.pi*deg/180.0

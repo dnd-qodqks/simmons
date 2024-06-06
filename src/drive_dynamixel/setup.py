@@ -20,7 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'dynamixel_controller = drive_dynamixel.dynamixel_controller:main'
+            'dynamixel_controller = drive_dynamixel.dynamixel_controller:main',
+            'test_pub = drive_dynamixel.test_pub:main',
+            'test_sub = drive_dynamixel.test_sub:main', 
         ],
     },
 )
