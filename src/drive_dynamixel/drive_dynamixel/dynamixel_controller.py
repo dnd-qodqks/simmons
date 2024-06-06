@@ -11,13 +11,13 @@ class DynamixelController(Node):
 
         self.sub_force_info_ = self.create_subscription(
             Force,
-            'force_info',
+            '/force_info',
             self.force_info_callback,
             10)
         
         self.person_info_sub_ = self.create_subscription(
             Person,
-            'person_info',
+            '/person_info',
             self.person_info_callback,
             10)
         
