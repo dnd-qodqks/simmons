@@ -235,7 +235,7 @@ class DynamixelController(Node):
             if dxl_comm_result != self.COMM_SUCCESS:
                 self.get_logger().info(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
 
-            dxl_getdata_result = self.g roupBulkRead.isAvailable(id, self.ADDR_MOVING, 1)
+            dxl_getdata_result = self.groupBulkRead.isAvailable(id, self.ADDR_MOVING, 1)
             if dxl_getdata_result != True:
                 self.get_logger().info(f"[ID:{id:03d}] groupBulkRead getdata failed")
 
