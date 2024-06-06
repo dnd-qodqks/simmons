@@ -1,4 +1,4 @@
- #include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -76,12 +76,9 @@ class SerialModule : public rclcpp::Node {
       
       fds[0].fd = serial_port;
       fds[0].events = POLLRDNORM;
-<<<<<<< HEAD
       
       //uint8_t txpacket[13] = { 0 };
       //write(serial_port, txpacket, 13);
-=======
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
     }
     
     ~SerialModule() {
@@ -108,20 +105,12 @@ class SerialModule : public rclcpp::Node {
       floatToByteArray(person_degree, &tx_data[4]);
       
       writePacket(length, tx_data);
-<<<<<<< HEAD
       RCLCPP_INFO(this->get_logger(), "TX) Person Length: %.3f, Person Degree: %.3f", person_length, person_degree);
-=======
-      RCLCPP_INFO(this->get_logger(), "writePacket!!");
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
     }
     
     void uart_rx() {
       // RX ---------------------------------
-<<<<<<< HEAD
       uint8_t rx_data[12] = { 0 };
-=======
-      uint8_t *rx_data = (uint8_t *)malloc(12);
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
       uint8_t total_length = RXPACKET_MAX_LEN;
       uint8_t result = 0;
       
@@ -149,11 +138,7 @@ class SerialModule : public rclcpp::Node {
       if (FY < -10000.0) FY = min;
       if (FZ < -10000.0) FZ = min;
 
-<<<<<<< HEAD
       RCLCPP_INFO(this->get_logger(), "RX) FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
-=======
-      RCLCPP_INFO(this->get_logger(), "FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
     }
     
     void floatToByteArray(float value, uint8_t* buffer) {
@@ -186,12 +171,8 @@ class SerialModule : public rclcpp::Node {
       if (txpacket == NULL)
         return;
 
-<<<<<<< HEAD
       if (mode_ == 1) {
         txpacket[3] = length;
-=======
-      txpacket[3] = length;
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
 
         for (uint8_t s = 0; s < length; s++)
         {
@@ -209,16 +190,11 @@ class SerialModule : public rclcpp::Node {
     
     void txPacket(uint8_t *txpacket) {
       uint8_t checksum = 0;
-<<<<<<< HEAD
       uint8_t total_packet_length = txpacket[3] + 5; // 4: HEADER0 HEADER1 FLAG LENGTH CHECKSUM
-=======
-      uint8_t total_packet_length = txpacket[3] + 4; // 4: HEADER0 HEADER1 FLAG LENGTH
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
       uint8_t written_packet_length = 0;
       
       txpacket[0] = 0xFF;
       txpacket[1] = 0xFF;
-<<<<<<< HEAD
       txpacket[2] = mode_;
 
       if (mode_ == 1)
@@ -262,20 +238,10 @@ class SerialModule : public rclcpp::Node {
       // for (int i = 0; i < total_packet_length; i++)
       //   checksum += txpacket[i];
       // checksum = ~checksum;
-=======
-      txpacket[2] = mode_ - 1;
-
-      for (int i = 0; i < total_packet_length; i++)
-        checksum += txpacket[i];
-      checksum = ~checksum;
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
 
       txpacket[total_packet_length-1] = checksum;
 
       tcflush(serial_port, TCOFLUSH);
-
-      for (int i = 0; i < total_packet_length; i++)
-        RCLCPP_DEBUG(this->get_logger(), "txpacket[%d]: %u", i, txpacket[i]);
 
       for (int i = 0; i < total_packet_length; i++)
         RCLCPP_DEBUG(this->get_logger(), "txpacket[%d]: %u", i, txpacket[i]);
@@ -286,11 +252,7 @@ class SerialModule : public rclcpp::Node {
     }
     
     int readPacket(uint8_t *data, uint8_t total_length) {
-<<<<<<< HEAD
       uint8_t rxpacket[RXPACKET_MAX_LEN] = { 0 };
-=======
-      uint8_t *rxpacket = (uint8_t *)malloc(RXPACKET_MAX_LEN);
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
       uint8_t rx_length = 0;
       uint8_t checksum  = 0;
       
@@ -315,7 +277,6 @@ class SerialModule : public rclcpp::Node {
           }
           
           for (int i = 0; i < total_length-1; i++)
-<<<<<<< HEAD
             checksum = addByte(checksum, rxpacket[i]);
           checksum = ~checksum;
           
@@ -339,11 +300,6 @@ class SerialModule : public rclcpp::Node {
                               + rxpacket[16]);
           */
           
-=======
-            checksum += rxpacket[i];
-          checksum = ~checksum;
-          
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
           if (rxpacket[total_length-1] != checksum)
           {
             RCLCPP_DEBUG(this->get_logger(), "rxpacket[total_length-1]: %u", rxpacket[total_length-1]);
@@ -351,19 +307,13 @@ class SerialModule : public rclcpp::Node {
             return -2;
           }
 
-<<<<<<< HEAD
           for (int i = 0; i < rxpacket[3]; i++)
             data[i] = rxpacket[i+4];
-=======
-	  for (int i = 0; i < rxpacket[3]; i++)
-	    data[i] = rxpacket[i+4];
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
         }
       }
       
       return 1;
     }
-<<<<<<< HEAD
     
     uint8_t addByte(uint8_t a, uint8_t b)
     {
@@ -381,10 +331,6 @@ class SerialModule : public rclcpp::Node {
     
   int mode_ = 0;
   int pre_mode_ = -1;
-=======
-
-  int mode_;
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)
   int serial_port;
   struct pollfd fds[1];
   rclcpp::Publisher<result_msgs::msg::Force>::SharedPtr force_info_pub_;
@@ -399,8 +345,4 @@ int main(int argc, char** argv) {
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> b79b642 (Uart 통신 GUI mode와 연결)

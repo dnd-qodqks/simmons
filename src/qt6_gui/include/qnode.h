@@ -29,10 +29,12 @@ private:
     rclcpp::Publisher<result_msgs::msg::Mode>::SharedPtr mode_pub_;
     rclcpp::Subscription<result_msgs::msg::Force>::SharedPtr force_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
+    rclcpp::TimerBase::SharedPtr timer_;
     QLabel* image_label_;
     QLabel* fps_label_;
 
 public slots:
+    void publish_message(void);
     void set_image_label(QLabel* image_label);
     void set_fps_label(QLabel* fps_label);
     void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg);

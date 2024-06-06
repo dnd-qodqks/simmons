@@ -17,7 +17,16 @@ qnode::qnode()
     force_sub_ = node_->create_subscription<result_msgs::msg::Force>(
             "force_info", 10, std::bind(&qnode::forceCallback, this, std::placeholders::_1));
 
+    timer_ = node_->create_wall_timer(
+                 std::chrono::milliseconds(10),
+                 std::bind(&qnode::publish_message, this));
+
     mode_info.mode = 0;
+}
+
+void qnode::publish_message() 
+{
+  mode_pub_->publish(mode_info);
 }
 
 void qnode::set_image_label(QLabel* image_label)
@@ -33,8 +42,6 @@ void qnode::set_fps_label(QLabel* fps_label)
 
 void qnode::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
-    mode_pub_->publish(mode_info);
-
     // qDebug() << "Received image, width:" << msg->width << ", height:" << msg->height;
     
     // qDebug() << "mode:" << mode_info.mode;
