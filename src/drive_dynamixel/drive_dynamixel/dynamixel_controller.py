@@ -43,15 +43,15 @@ class DynamixelController(Node):
 
         self.TORQUE_ENABLE               = 1                               # Value for enabling the torque
         self.LED_ENABLE                  = 1                               # Value for enabling the LED
-        self.PROFILE_ACCELERATION        = 10
-        self.PROFILE_VELOCITY            = 210
+        self.PROFILE_ACCELERATION        = 5
+        self.PROFILE_VELOCITY            = 70
         self.TORQUE_DISABLE              = 0                               # Value for disabling the torque
         self.LED_DISABLE                 = 0                               # Value for enabling the LED
         self.DXL_MOVING_STATUS_THRESHOLD = 20                              # Dynamixel moving status threshold
         self.COMM_SUCCESS                = 0                               # Communication Success result value
         self.LEN_MX_GOAL_POSITION        = 4
         self.LEN_MX_PRESENT_POSITION     = 4
-        self.OFFSET                      = [-528, -98, 122, -64]
+        self.OFFSET                      = [-528, 98, -122, 64]
 
         self.portHandler_ = PortHandler(self.DEVICENAME)
         self.portHandler_.setBaudRate(self.BAUDRATE)
@@ -97,19 +97,30 @@ class DynamixelController(Node):
                    break
 
     def person_info_callback(self, msg):
-        self.get_logger().info(f"length: {msg.length}, degree: {msg.degree}")
-        # length_factor = 1000.0
-        # length = msg.length * length_factor
-        # degree_factor = 2.0
-        # degree = (msg.degree - 90.0) * degree_factor
+        self.get_logger().info(f"before) length: {msg.length}, degree: {msg.degree}")
+        length_factor = 1000.0
+        length = msg.length * length_factor
+        degree_factor = 1.0
+        degree = (msg.degree - 90.0) * degree_factor
         
-        # steering_info = self.steering_kinematics(length, degree)
+        self.get_logger().info(f"after) length: {length}, degree: {degree}")
+
+        steering_info = self.steering_kinematics(length, degree)
         
-        # goal_postions = []
-        # for radian in steering_info[:-1]:
-        #     goal_postions.append(math.fabs(int((self.rad2deg(radian) / 90.0) * 2048)))
+        goal_positions = []
+        for radian in steering_info[:-1]:
+            goal_positions.append(int(math.fabs(self.rad2deg(radian) / 90.0 * 2048)))
         
-        # self.set_multi_goal_position(goal_postions)
+        if degree < 0.0:
+            for i in range(4):
+                goal_positions[i] = 4096 - goal_positions[i]
+
+        self.get_logger().info(f"FL: {goal_positions[0]}")
+        self.get_logger().info(f"FR: {goal_positions[1]}")
+        self.get_logger().info(f"BL: {goal_positions[2]}")
+        self.get_logger().info(f"BR: {goal_positions[3]}")
+
+        self.set_multi_goal_position([goal_positions[0], goal_positions[2], goal_positions[3], goal_positions[1]])
         
     def angles2goal_positions(self, angles):
         pass
@@ -190,7 +201,7 @@ class DynamixelController(Node):
     def set_multi_goal_position(self, goal_postions):
         # Allocate goal position value into byte array
         for id in self.DXL_ID:
-            self.get_logger().info(f'ID: {id}, goal_postions: {goal_postions}')
+            self.get_logger().info(f'ID: {id}, goal_postions: {goal_postions[id]}')
             self.dxl_goal_position[id] = goal_postions[id] + self.OFFSET[id]
 
             param_goal_position = [DXL_LOBYTE(DXL_LOWORD(self.dxl_goal_position[id])), 
@@ -298,7 +309,7 @@ class DynamixelController(Node):
         front_right = math.atan2(L/2.0, rot_radius + T/2.0) - math.pi/2.0
         back_left = -front_left
         back_right = -front_right
-        # center_radius = rot_radius
+        center_radius = rot_radius
         
         steering_info = [front_left, front_right, back_left, back_right, center_radius]
         

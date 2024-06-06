@@ -13,7 +13,7 @@ class PublisherNode(Node):
     def timer_callback(self):
         msg = Person()
         msg.length = 1.0
-        msg.degree = 95.0
+        msg.degree = 120.0
         self.publisher_.publish(msg)
 
 def main(args=None):
