@@ -9,11 +9,13 @@ class DynamixelController(Node):
     def __init__(self):
         super().__init__('dynamixel_controller')
 
+        """
         self.sub_force_info_ = self.create_subscription(
             Force,
             '/force_info',
             self.force_info_callback,
             10)
+        """
         
         self.person_info_sub_ = self.create_subscription(
             Person,
@@ -83,7 +85,9 @@ class DynamixelController(Node):
 
     def force_info_callback(self, msg):
         # 각 모터의 각도 계산
+        pass
         
+        """
         angles = [0, 1, 2, 3]        # 각 모터의 각도 저장
         goal_postions = angles2goal_positions(angles) # 각도를 골 포지션으로 변환
         
@@ -95,8 +99,17 @@ class DynamixelController(Node):
                self.dxl_moving[2] == 0 and \
                self.dxl_moving[3] == 0:
                    break
+        """
 
     def person_info_callback(self, msg):
+        self.get_logger().info("person info callback")
+
+        if not(0.7 <= msg.length <= 1.3):
+            return
+
+        if not(60.0 <= msg.degree <= 120.0):
+            return
+
         self.get_logger().info(f"before) length: {msg.length}, degree: {msg.degree}")
         length_factor = 1000.0
         length = msg.length * length_factor
@@ -109,8 +122,11 @@ class DynamixelController(Node):
         
         goal_positions = []
         for radian in steering_info[:-1]:
-            goal_positions.append(int(math.fabs(self.rad2deg(radian) / 90.0 * 2048)))
-        
+            if math.isnan(math.fabs(self.rad2deg(radian))):
+                goal_positions.append(2048)
+            else:
+                goal_positions.append(int(math.fabs(self.rad2deg(radian) / 90.0 * 2048)))
+
         if degree < 0.0:
             for i in range(4):
                 goal_positions[i] = 4096 - goal_positions[i]
@@ -130,47 +146,47 @@ class DynamixelController(Node):
         for id in self.DXL_ID:
             dxl_comm_result, dxl_error = self.packetHandler_.write1ByteTxRx(self.portHandler_, id, self.ADDR_MX_TORQUE_ENABLE, signal)
             if dxl_comm_result != self.COMM_SUCCESS:
-                self.get_logger().info(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
+                self.get_logger().debug(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
             elif dxl_error != 0:
-                self.get_logger().info(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
+                self.get_logger().debug(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
             else:
                 if signal == self.TORQUE_ENABLE:
-                    self.get_logger().info(f"Dynamixel#{id} has been successfully torque enable")
+                    self.get_logger().debug(f"Dynamixel#{id} has been successfully torque enable")
                 else:
-                    self.get_logger().info(f"Dynamixel#{id} has been successfully torque disable")
+                    self.get_logger().debug(f"Dynamixel#{id} has been successfully torque disable")
 
     def set_dxl_led(self, signal):
         for id in self.DXL_ID:
             dxl_comm_result, dxl_error = self.packetHandler_.write1ByteTxRx(self.portHandler_, id, self.ADDR_MX_LED_ENABLE, signal)
             if dxl_comm_result != self.COMM_SUCCESS:
-                self.get_logger().info(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
+                self.get_logger().debug(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
             elif dxl_error != 0:
-                self.get_logger().info(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
+                self.get_logger().debug(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
             else:
                 if signal == self.LED_ENABLE:
-                    self.get_logger().info(f"Dynamixel#{id} has been successfully led enable")
+                    self.get_logger().debug(f"Dynamixel#{id} has been successfully led enable")
                 else:
-                    self.get_logger().info(f"Dynamixel#{id} has been successfully led disable")
+                    self.get_logger().debug(f"Dynamixel#{id} has been successfully led disable")
 
     def set_dxl_profile(self, acc, vel):
         for id in self.DXL_ID:
             dxl_comm_result, dxl_error = self.packetHandler_.write4ByteTxRx(self.portHandler_, id, self.ADDR_PROFILE_ACCELERATION, acc)
 
             if dxl_comm_result != self.COMM_SUCCESS:
-                self.get_logger().info(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
+                self.get_logger().debug(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
             elif dxl_error != 0:
-                self.get_logger().info(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
+                self.get_logger().debug(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
             else:
-                self.get_logger().info(f"Dynamixel#{id} has been successfully profile acceleration: {acc}")
+                self.get_logger().debug(f"Dynamixel#{id} has been successfully profile acceleration: {acc}")
 
             dxl_comm_result, dxl_error = self.packetHandler_.write4ByteTxRx(self.portHandler_, id, self.ADDR_PROFILE_VELOCITY, vel)
 
             if dxl_comm_result != self.COMM_SUCCESS:
-                self.get_logger().info(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
+                self.get_logger().debug(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
             elif dxl_error != 0:
-                self.get_logger().info(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
+                self.get_logger().debug(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
             else:
-                self.get_logger().info(f"Dynamixel#{id} has been successfully profile velocity: {vel}")
+                self.get_logger().debug(f"Dynamixel#{id} has been successfully profile velocity: {vel}")
 
     def set_goal_position(self, id, change_goal_position):
         start_time = time.time()
@@ -178,9 +194,9 @@ class DynamixelController(Node):
         # Write goal position
         result, error = self.packetHandler_.write4ByteTxRx(self.portHandler_, id, self.ADDR_MX_GOAL_POSITION, change_goal_position)
         if result == self.COMM_SUCCESS:
-            self.get_logger().info("successfully goal position")
+            self.get_logger().debug("successfully goal position")
         else:
-            self.get_logger().info(f"Fail goal position, Error: {self.packetHandler_.getRxPacketError(error)}")
+            self.get_logger().debug(f"Fail goal position, Error: {self.packetHandler_.getRxPacketError(error)}")
 
         while 1:
             # Read present position
@@ -196,12 +212,12 @@ class DynamixelController(Node):
                 break
         end_time = time.time()
         time_taken = end_time - start_time
-        self.get_logger().info(f"successfully goal position: {change_goal_position}, time_take: {time_taken:.5f} [s]")
+        self.get_logger().debug(f"successfully goal position: {change_goal_position}, time_take: {time_taken:.5f} [s]")
 
     def set_multi_goal_position(self, goal_postions):
         # Allocate goal position value into byte array
         for id in self.DXL_ID:
-            self.get_logger().info(f'ID: {id}, goal_postions: {goal_postions[id]}')
+            self.get_logger().debug(f'ID: {id}, goal_postions: {goal_postions[id]}')
             self.dxl_goal_position[id] = goal_postions[id] + self.OFFSET[id]
 
             param_goal_position = [DXL_LOBYTE(DXL_LOWORD(self.dxl_goal_position[id])), 
@@ -237,15 +253,15 @@ class DynamixelController(Node):
         for id in self.DXL_ID:
             dxl_addparam_result = self.groupBulkRead.addParam(id, self.ADDR_MOVING, 1)
             if dxl_addparam_result != True:
-                self.get_logger().info(f"[ID:{id:03d}] groupBulkRead addparam failed")
+                self.get_logger().debug(f"[ID:{id:03d}] groupBulkRead addparam failed")
 
             dxl_comm_result = self.groupBulkRead.txRxPacket()
             if dxl_comm_result != self.COMM_SUCCESS:
-                self.get_logger().info(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
+                self.get_logger().debug(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
 
             dxl_getdata_result = self.groupBulkRead.isAvailable(id, self.ADDR_MOVING, 1)
             if dxl_getdata_result != True:
-                self.get_logger().info(f"[ID:{id:03d}] groupBulkRead getdata failed")
+                self.get_logger().debug(f"[ID:{id:03d}] groupBulkRead getdata failed")
 
             self.dxl_moving[id] = self.groupBulkRead.getData(id, self.ADDR_MOVING, 1)
 
@@ -261,9 +277,9 @@ class DynamixelController(Node):
             while True:
                 self.read_multi_present_position()
 
-                self.get_logger().info(f"--- DXL goal position: {self.dxl_goal_position} ---")
-                self.get_logger().info(f"--- DXL pres position: {self.dxl_present_position} ---")
-                self.get_logger().info(f"--- DXL moving: {self.dxl_moving} ---")
+                self.get_logger().debug(f"--- DXL goal position: {self.dxl_goal_position} ---")
+                self.get_logger().debug(f"--- DXL pres position: {self.dxl_present_position} ---")
+                self.get_logger().debug(f"--- DXL moving: {self.dxl_moving} ---")
                     
                 self.check_moving_pram()
                 

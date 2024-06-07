@@ -91,7 +91,7 @@ class SerialModule : public rclcpp::Node {
   private:
     void modeCallback(const result_msgs::msg::Mode msg) {
       mode_ = msg.mode;
-      RCLCPP_INFO(this->get_logger(), "Mode: %d", mode_);
+      RCLCPP_DEBUG(this->get_logger(), "Mode: %d", mode_);
     }
 
     void uart_tx() {
@@ -105,7 +105,7 @@ class SerialModule : public rclcpp::Node {
       floatToByteArray(person_degree, &tx_data[4]);
       
       writePacket(length, tx_data);
-      RCLCPP_INFO(this->get_logger(), "TX) Person Length: %.3f, Person Degree: %.3f", person_length, person_degree);
+      RCLCPP_DEBUG(this->get_logger(), "TX) Person Length: %.3f, Person Degree: %.3f", person_length, person_degree);
     }
     
     void uart_rx() {
@@ -138,7 +138,7 @@ class SerialModule : public rclcpp::Node {
       if (FY < -10000.0) FY = min;
       if (FZ < -10000.0) FZ = min;
 
-      RCLCPP_INFO(this->get_logger(), "RX) FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
+      RCLCPP_DEBUG(this->get_logger(), "RX) FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
     }
     
     void floatToByteArray(float value, uint8_t* buffer) {
