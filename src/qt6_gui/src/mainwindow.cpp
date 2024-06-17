@@ -33,16 +33,14 @@ void MainWindow::initUi()
   setStatusBar(nullptr);
 }
 
-void MainWindow::on_Color_clicked()
+void MainWindow::on_Mode_1_clicked()
 {
-  // qDebug() << "on_Color_clicked()";
   ui->fpsLabel->setText("Mode 1");
   commNode.mode_info.mode = 1;
 }
 
-void MainWindow::on_Depth_clicked()
+void MainWindow::on_Mode_2_clicked()
 {
-  // qDebug() << "on_Depth_clicked()";
   ui->fpsLabel->setText("Mode 2");
   commNode.mode_info.mode = 2;
 }

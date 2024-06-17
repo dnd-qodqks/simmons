@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="Color">
+   <widget class="QPushButton" name="Mode_1">
     <property name="geometry">
      <rect>
       <x>665</x>
@@ -30,7 +30,7 @@
      </size>
     </property>
     <property name="text">
-     <string>Color</string>
+     <string>Mode 1</string>
     </property>
    </widget>
    <widget class="QLabel" name="image_label">
@@ -52,7 +52,7 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="Depth">
+   <widget class="QPushButton" name="Mode_2">
     <property name="geometry">
      <rect>
       <x>665</x>
@@ -68,7 +68,7 @@
      </size>
     </property>
     <property name="text">
-     <string>Depth</string>
+     <string>Mode 2</string>
     </property>
    </widget>
    <widget class="QLabel" name="fpsLabel">

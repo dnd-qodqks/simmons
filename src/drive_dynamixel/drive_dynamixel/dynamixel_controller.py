@@ -4,18 +4,18 @@ import math
 from dynamixel_sdk import *
 from result_msgs.msg import Force
 from result_msgs.msg import Person
+from result_msgs.msg import Mode
 
 class DynamixelController(Node):
     def __init__(self):
         super().__init__('dynamixel_controller')
 
-        """
-        self.sub_force_info_ = self.create_subscription(
+        
+        self.force_info_sub_ = self.create_subscription(
             Force,
             '/force_info',
             self.force_info_callback,
             10)
-        """
         
         self.person_info_sub_ = self.create_subscription(
             Person,
@@ -23,6 +23,13 @@ class DynamixelController(Node):
             self.person_info_callback,
             10)
         
+        self.mode_info_sub_ = self.create_subscription(
+            Mode,
+            '/mode_info',
+            self.mode_info_callback,
+            10)
+        
+        self.mode = 0
         self.DEBUG = False
 
         # Control table address
@@ -33,6 +40,8 @@ class DynamixelController(Node):
         self.ADDR_PROFILE_ACCELERATION   = 108
         self.ADDR_PROFILE_VELOCITY       = 112
         self.ADDR_MOVING                 = 122
+        self.ADDR_POSITION_I_GAIN        = 82
+        self.ADDR_POSITION_P_GAIN        = 84
 
         # Protocol version
         self.PROTOCOL_VERSION            = 1                               # See which protocol version is used in the Dynamixel
@@ -46,14 +55,17 @@ class DynamixelController(Node):
         self.TORQUE_ENABLE               = 1                               # Value for enabling the torque
         self.LED_ENABLE                  = 1                               # Value for enabling the LED
         self.PROFILE_ACCELERATION        = 5
-        self.PROFILE_VELOCITY            = 70
+        self.PROFILE_VELOCITY            = 50
         self.TORQUE_DISABLE              = 0                               # Value for disabling the torque
         self.LED_DISABLE                 = 0                               # Value for enabling the LED
         self.DXL_MOVING_STATUS_THRESHOLD = 20                              # Dynamixel moving status threshold
         self.COMM_SUCCESS                = 0                               # Communication Success result value
         self.LEN_MX_GOAL_POSITION        = 4
         self.LEN_MX_PRESENT_POSITION     = 4
-        self.OFFSET                      = [-528, 98, -122, 64]
+        self.OFFSET                      = [-2048+2129, 
+                                            -2048+2034, 
+                                            -2048+1933, 
+                                            -2048+1927]
 
         self.portHandler_ = PortHandler(self.DEVICENAME)
         self.portHandler_.setBaudRate(self.BAUDRATE)
@@ -77,70 +89,91 @@ class DynamixelController(Node):
         self.set_dxl_torque(self.TORQUE_ENABLE)
         self.set_dxl_led(self.LED_ENABLE)
         self.set_dxl_profile(self.PROFILE_ACCELERATION, self.PROFILE_VELOCITY)
+        self.set_dxl_position_gain(self.ADDR_POSITION_I_GAIN, 100, self.ADDR_POSITION_P_GAIN, 700)
         self.set_multi_goal_position([2048, 2048, 2048, 2048])
-        time.sleep(1.0)
+        time.sleep(3.0)
 
         # Test
         # self.test_sync_bulk()
 
+    def mode_info_callback(self, msg):
+        self.mode = msg.mode
+        
+        if self.mode == 0:
+            self.set_multi_goal_position([2048, 2048, 2048, 2048])
+
     def force_info_callback(self, msg):
-        # 각 모터의 각도 계산
-        pass
         
-        """
-        angles = [0, 1, 2, 3]        # 각 모터의 각도 저장
-        goal_postions = angles2goal_positions(angles) # 각도를 골 포지션으로 변환
+        if self.mode == 2:
+            
+            if msg.x == 0.0 and msg.y == 0:
+                angle = 90.0
+            else:         
+                angle = self.rad2deg(math.atan2(msg.y, msg.x))
+            
+            if angle < 0:
+                angle = 180 + angle
+                     
+            self.get_logger().info(f"\nmsg: {msg}\nforce deg: {angle}")
+            
+            goal_positions = [0, 0, 0, 0]
+                        
+            goal_positions[0] = 4096 - (int(angle / 180.0 * 2048) + 1024) # FL
+            goal_positions[1] = int(angle / 180.0 * 2048) + 1024 # BL
+            goal_positions[2] = int(angle / 180.0 * 2048) + 1024 # BR
+            goal_positions[3] = 4096 - (int(angle / 180.0 * 2048) + 1024) # FR
+            
+            if angle == 0.0:
+                goal_positions[1] = 4095 - goal_positions[1]
+                goal_positions[3] = 4095 - goal_positions[3]
+            elif angle == 180.0:
+                goal_positions[0] = 4095 - goal_positions[0]
+                goal_positions[2] = 4095 - goal_positions[2]
+            
+                            
+            self.get_logger().info(f"goal positions: {goal_positions}")
+            
+            self.set_multi_goal_position(goal_positions)
         
-        set_multi_goal_position(goal_postions)
-        
-        while True:
-            if self.dxl_moving[0] == 0 and \
-               self.dxl_moving[1] == 0 and \
-               self.dxl_moving[2] == 0 and \
-               self.dxl_moving[3] == 0:
-                   break
-        """
-
     def person_info_callback(self, msg):
-        self.get_logger().info("person info callback")
-
-        if not(0.7 <= msg.length <= 1.3):
-            return
-
-        if not(60.0 <= msg.degree <= 120.0):
-            return
-
-        self.get_logger().info(f"before) length: {msg.length}, degree: {msg.degree}")
-        length_factor = 1000.0
-        length = msg.length * length_factor
-        degree_factor = 1.0
-        degree = (msg.degree - 90.0) * degree_factor
         
-        self.get_logger().info(f"after) length: {length}, degree: {degree}")
+        if self.mode == 1:
+                  
+            self.get_logger().debug("person info callback")
+    
+            if not(0.7 <= msg.length <= 1.3):
+                msg.length = 1.0
 
-        steering_info = self.steering_kinematics(length, degree)
+            if not(60.0 <= msg.degree <= 120.0):
+                msg.degree = 90.0
+
+            self.get_logger().debug(f"before) length: {msg.length}, degree: {msg.degree}")
+            length_factor = 1000.0
+            length = msg.length * length_factor
+            degree_factor = 1.0
+            degree = (msg.degree - 90.0) * degree_factor
         
-        goal_positions = []
-        for radian in steering_info[:-1]:
-            if math.isnan(math.fabs(self.rad2deg(radian))):
-                goal_positions.append(2048)
-            else:
-                goal_positions.append(int(math.fabs(self.rad2deg(radian) / 90.0 * 2048)))
+            self.get_logger().debug(f"after) length: {length}, degree: {degree}")
 
-        if degree < 0.0:
-            for i in range(4):
-                goal_positions[i] = 4096 - goal_positions[i]
-
-        self.get_logger().info(f"FL: {goal_positions[0]}")
-        self.get_logger().info(f"FR: {goal_positions[1]}")
-        self.get_logger().info(f"BL: {goal_positions[2]}")
-        self.get_logger().info(f"BR: {goal_positions[3]}")
-
-        self.set_multi_goal_position([goal_positions[0], goal_positions[2], goal_positions[3], goal_positions[1]])
+            steering_info = self.steering_kinematics(length, degree)
         
-    def angles2goal_positions(self, angles):
-        pass
-        # return goal_postions
+            goal_positions = []
+            for radian in steering_info[:-1]:
+                if math.isnan(math.fabs(self.rad2deg(radian))):
+                    goal_positions.append(2048)
+                else:
+                    goal_positions.append(int(math.fabs(self.rad2deg(radian) / 90.0 * 2048)))
+
+            if degree < 0.0:
+                for i in range(4):
+                    goal_positions[i] = 4096 - goal_positions[i]
+
+            self.get_logger().debug(f"FL: {goal_positions[0]}")
+            self.get_logger().debug(f"FR: {goal_positions[1]}")
+            self.get_logger().debug(f"BL: {goal_positions[2]}")
+            self.get_logger().debug(f"BR: {goal_positions[3]}")
+
+            self.set_multi_goal_position([goal_positions[0], goal_positions[2], goal_positions[3], goal_positions[1]])
 
     def set_dxl_torque(self, signal):
         for id in self.DXL_ID:
@@ -188,6 +221,26 @@ class DynamixelController(Node):
             else:
                 self.get_logger().debug(f"Dynamixel#{id} has been successfully profile velocity: {vel}")
 
+    def set_dxl_position_gain(self, addr_position_i_gain, i_gain, addr_position_p_gain, p_gain):
+        for id in self.DXL_ID:
+            dxl_comm_result, dxl_error = self.packetHandler_.write4ByteTxRx(self.portHandler_, id, addr_position_i_gain, i_gain)
+
+            if dxl_comm_result != self.COMM_SUCCESS:
+                self.get_logger().debug(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
+            elif dxl_error != 0:
+                self.get_logger().debug(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
+            else:
+                self.get_logger().debug(f"Dynamixel#{id} has been successfully Position I Gain: {i_gain}")
+
+            dxl_comm_result, dxl_error = self.packetHandler_.write4ByteTxRx(self.portHandler_, id, addr_position_p_gain, p_gain)
+
+            if dxl_comm_result != self.COMM_SUCCESS:
+                self.get_logger().debug(f"{self.packetHandler_.getTxRxResult(dxl_comm_result)}")
+            elif dxl_error != 0:
+                self.get_logger().debug(f"{self.packetHandler_.getRxPacketError(dxl_error)}")
+            else:
+                self.get_logger().debug(f"Dynamixel#{id} has been successfully Position P Gain: {p_gain}")
+    
     def set_goal_position(self, id, change_goal_position):
         start_time = time.time()
 

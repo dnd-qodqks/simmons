@@ -16,21 +16,19 @@ def generate_launch_description():
       			'camera_namespace': 'robot', 
                         'config_file': '/root/ros2_ws/src/realsense-ros/realsense2_camera/config/config.yaml'}.items(),
       )
-      
-   yolo = IncludeLaunchDescription(
-      PythonLaunchDescriptionSource([os.path.join(
-         get_package_share_directory('yolov8_bringup'), 'launch'),
-         '/yolov8.launch.py']),
-      launch_arguments={'device': 'cpu',
-      			'model': 'yolov8n.pt', 
-                        'threshold': '0.6'}.items(),
-      )
    
-   img_processing = Node(
+   img_process = Node(
 	    package='image_processing',
 	    namespace='image_processing',
 	    executable='image_processing',
-	    name='image_processing_node'
+	    name='image_processing',
+	)
+   
+   udp_cm = Node(
+	    package='udp_cm',
+	    namespace='udp_cm',
+	    executable='udp_cm',
+	    name='udp_cm',
 	)
 	
    dxl = Node(
@@ -51,13 +49,14 @@ def generate_launch_description():
 	    package='qt6_gui',
 	    namespace='qt6_gui',
 	    executable='qt6_gui',
-	    name='qt6_gui_node'
+	    name='qt6_gui_node',
+	    # arguments=['--ros-args', '--log-level', 'debug']
 	)
    
    return LaunchDescription([
       realsense_camera,
-      yolo,
-      img_processing,
+      img_process,
+      udp_cm,
       dxl,
       serial,
       qt6_gui

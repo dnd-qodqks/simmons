@@ -10,9 +10,11 @@
 #include <cstring>
 #include <cstdio>
 #include <poll.h>
+#include <thread>
 
 #include <rclcpp/rclcpp.hpp>
 #include "result_msgs/msg/mode.hpp"
+#include "result_msgs/msg/person.hpp"
 #include "result_msgs/msg/force.hpp"
 
 #define LOWORD(l)       ((uint16_t)(((uint64_t)(l)) & 0xffff))
@@ -29,31 +31,38 @@ class SerialModule : public rclcpp::Node {
                 "/force_info", 10);
       
       mode_sub_ = this->create_subscription<result_msgs::msg::Mode>(
-                "mode_info", 10, 
+                "/mode_info", 10, 
                 std::bind(&SerialModule::modeCallback, this, std::placeholders::_1));
       
+      person_info_sub_ = this->create_subscription<result_msgs::msg::Person>(
+                "/person_info", 10, 
+                std::bind(&SerialModule::personCallback, this, std::placeholders::_1));
+                     
       tx_timer_ = this->create_wall_timer(
                     std::chrono::milliseconds(10),
                     std::bind(&SerialModule::uart_tx, this));
-
+      
       rx_timer_ = this->create_wall_timer(
                     std::chrono::milliseconds(10),
                     std::bind(&SerialModule::uart_rx, this));
-          
+        
       struct termios options;
       memset (&options, 0, sizeof options);
       const char* device = "/dev/ttyAMA0";
       
       serial_port = open(device, O_RDWR | O_NOCTTY);
       if (serial_port == -1) {
-        RCLCPP_INFO(this->get_logger(), "Serial Open Error");
+        RCLCPP_ERROR(this->get_logger(), "Failed to open serial port: %s", strerror(errno));
+        return;
       }
       else {
         RCLCPP_INFO(this->get_logger(), "Serial Open!!");
       }
       
       if (tcgetattr(serial_port, &options) != 0) {
-        RCLCPP_INFO(this->get_logger(), "termios Error");
+        RCLCPP_ERROR(this->get_logger(), "Error getting serial port attributes: %s", strerror(errno));
+        close(serial_port);
+        return;
       }
       
       bzero(&options, sizeof(options));
@@ -67,8 +76,10 @@ class SerialModule : public rclcpp::Node {
       
       tcflush(serial_port, TCIFLUSH);
       
-      if (tcsetattr(serial_port, TCSANOW, &options)!= 0) {
-        RCLCPP_INFO(this->get_logger(), "UART Option Error");
+      if (tcsetattr(serial_port, TCSANOW, &options) != 0) {
+        RCLCPP_ERROR(this->get_logger(), "Error setting serial port options: %s", strerror(errno));
+        close(serial_port);
+        return;
       }
       else {
         RCLCPP_INFO(this->get_logger(), "UART Option Setting!!");
@@ -76,9 +87,6 @@ class SerialModule : public rclcpp::Node {
       
       fds[0].fd = serial_port;
       fds[0].events = POLLRDNORM;
-      
-      //uint8_t txpacket[13] = { 0 };
-      //write(serial_port, txpacket, 13);
     }
     
     ~SerialModule() {
@@ -86,26 +94,57 @@ class SerialModule : public rclcpp::Node {
         close(serial_port);
       }
       RCLCPP_INFO(this->get_logger(), "Close Serial Module");
+      //RCLCPP_INFO(this->get_logger(), "Max Elapsed: %f [s]", max_elapsed);
     }
   
   private:
     void modeCallback(const result_msgs::msg::Mode msg) {
       mode_ = msg.mode;
       RCLCPP_DEBUG(this->get_logger(), "Mode: %d", mode_);
+      
+      if (mode_ != pre_mode_) 
+      {
+        tcflush(serial_port, TCOFLUSH);
+        pre_mode_ = mode_;
+      } 
+    }
+    
+    void personCallback(const result_msgs::msg::Person msg) {
+      if (std::isnan(msg.length)) {
+          person_length_ = 0.0;
+      } else {
+          person_length_ = msg.length;
+      }
+
+      if (std::isnan(msg.degree)) {
+          person_degree_ = 0.0;
+      } else {
+          person_degree_ = msg.degree;
+      }
     }
 
+    
     void uart_tx() {
       // TX ---------------------------------
-      float person_length = 1.2;
-      float person_degree = 91.3;
+      //auto start = std::chrono::high_resolution_clock::now();
+      
+      //float person_length = 1.2;
+      //float person_degree = 91.3;
       uint8_t length = 8;
       uint8_t tx_data[8];
       
-      floatToByteArray(person_length, tx_data);
-      floatToByteArray(person_degree, &tx_data[4]);
+      floatToByteArray(person_length_, tx_data);
+      floatToByteArray(person_degree_, &tx_data[4]);
       
       writePacket(length, tx_data);
-      RCLCPP_DEBUG(this->get_logger(), "TX) Person Length: %.3f, Person Degree: %.3f", person_length, person_degree);
+      RCLCPP_DEBUG(this->get_logger(), "TX) Person Length: %.3f, Person Degree: %.3f", person_length_, person_degree_);
+      
+      //auto end = std::chrono::high_resolution_clock::now();
+      //std::chrono::duration<double> elapsed = end - start;
+      
+      // if (max_elapsed < elapsed.count()) max_elapsed = elapsed.count();
+      
+      // RCLCPP_INFO(this->get_logger(), "Elapsed: %.6f", elapsed.count());
     }
     
     void uart_rx() {
@@ -130,15 +169,28 @@ class SerialModule : public rclcpp::Node {
       float FY = byteArrayToFloat(&rx_data[4]);
       float FZ = byteArrayToFloat(&rx_data[8]);
       
-      float max = 10000.0, min = -max;
-      if (FX > 10000.0) FX = max;
-      if (FY > 10000.0) FY = max;
-      if (FZ > 10000.0) FZ = max;
-      if (FX < -10000.0) FX = min;
-      if (FY < -10000.0) FY = min;
-      if (FZ < -10000.0) FZ = min;
+      float max = 40000.0, min = 0.0;
+      if (FX > max) FX = max;
+      if (FY > max) FY = max;
+      if (FZ > max) FZ = max;
+      if (FX < min) FX = min;
+      if (FY < min) FY = min;
+      if (FZ < min) FZ = min;
 
-      RCLCPP_DEBUG(this->get_logger(), "RX) FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
+      if (pre_FX != FX || pre_FY != FY || pre_FZ != FZ)
+      {
+      	RCLCPP_INFO(this->get_logger(), "RX) FX: %.3f, FY: %.3f, FZ: %.3f", FX, FY, FZ);
+      }
+      
+      result_msgs::msg::Force msg;
+      msg.x = FX - 20000;
+      msg.y = FY - 20000;
+      msg.z = FZ - 20000;
+      force_info_pub_->publish(msg);
+    
+      pre_FX = FX;
+      pre_FY = FY;
+      pre_FZ = FZ;
     }
     
     void floatToByteArray(float value, uint8_t* buffer) {
@@ -160,15 +212,16 @@ class SerialModule : public rclcpp::Node {
       tmp |= ((array[2] & 0xFF) << 8);
       tmp |= array[3] & 0xFF;
       
-      value = *((float*) & tmp);
+      std::memcpy(&value, &tmp, sizeof(float));
       
       return value;
     }
 
+    
     void writePacket(uint8_t length, uint8_t *data) {
-      uint8_t *txpacket = (uint8_t *)malloc(length+5);
+      uint8_t txpacket[13] = { 0, };
 
-      if (txpacket == NULL)
+      if (txpacket == NULL || data == NULL)
         return;
 
       if (mode_ == 1) {
@@ -184,71 +237,65 @@ class SerialModule : public rclcpp::Node {
       }
       
       txPacket(txpacket);
-
-      free(txpacket);
     }
     
     void txPacket(uint8_t *txpacket) {
+      if (txpacket == NULL)
+        return;
+    
       uint8_t checksum = 0;
-      uint8_t total_packet_length = txpacket[3] + 5; // 4: HEADER0 HEADER1 FLAG LENGTH CHECKSUM
-      uint8_t written_packet_length = 0;
+      //uint8_t total_packet_length = txpacket[3] + 5; // 5: HEADER0 HEADER1 FLAG LENGTH CHECKSUM
+      uint8_t total_packet_length = 13;
       
       txpacket[0] = 0xFF;
       txpacket[1] = 0xFF;
       txpacket[2] = mode_;
 
-      if (mode_ == 1)
-      {
-        /*
-        checksum = ~(uint8_t)(txpacket[0]
-                            + txpacket[1]
-                            + txpacket[2]
-                            + txpacket[3]
-                            + txpacket[4]
-                            + txpacket[5]
-                            + txpacket[6]
-                            + txpacket[7]
-                            + txpacket[8]
-                            + txpacket[9]
-                            + txpacket[10]
-                            + txpacket[11]
-                            + txpacket[12]);
-        */
-        
-        for (int i = 0; i < 13; i++)
-          checksum = addByte(checksum, txpacket[i]);
-        checksum = ~checksum;
-      }
-      else if (mode_ == 2)
-      {
-        /*
-        checksum = ~(uint8_t)(txpacket[0]
-                            + txpacket[1]
-                            + txpacket[2]
-                            + txpacket[3]
-                            + txpacket[4]);
-        */
-        
-        for (int i = 0; i < 6; i++)
-          checksum = addByte(checksum, txpacket[i]);
-        checksum = ~checksum;
-        
-      }
+      for (int i = 0; i < total_packet_length; i++)
+        checksum = addByte(checksum, txpacket[i]);
+      checksum = ~checksum;
       
-      // for (int i = 0; i < total_packet_length; i++)
-      //   checksum += txpacket[i];
-      // checksum = ~checksum;
-
       txpacket[total_packet_length-1] = checksum;
 
-      tcflush(serial_port, TCOFLUSH);
-
-      for (int i = 0; i < total_packet_length; i++)
+      for (int i = 0; i < 13; i++)
         RCLCPP_DEBUG(this->get_logger(), "txpacket[%d]: %u", i, txpacket[i]);
 
-      written_packet_length = write(serial_port, txpacket, total_packet_length);
+      uint32_t intr_times = 0;
+      uint32_t write_timeout_us_ = 20;
+      
+      while (total_packet_length > 0)
+      {
+        ssize_t ret = write(serial_port, txpacket, total_packet_length);
+        if (ret == -1)
+        {
+          if (errno == EINTR || errno == EAGAIN)
+          {
+            intr_times++;
+            if (intr_times > write_timeout_us_)
+            {
+              errno = EBUSY;
+              break;
+            }
+            std::this_thread::sleep_for(std::chrono::microseconds(1));
+            continue;
+          }
+          
+          break;
+        }
+        
+        intr_times = 0;
+        total_packet_length -= ret;
+        txpacket 	    += ret;
+      }
 
-      RCLCPP_DEBUG(this->get_logger(), "TX Packet Success!! written_packet_length: %u", written_packet_length);
+      if (total_packet_length > 0)
+      {
+        RCLCPP_DEBUG(this->get_logger(), "TX Packet Fail!! total_packet_length: %u", total_packet_length);
+      }
+      else
+      {
+        RCLCPP_DEBUG(this->get_logger(), "TX Packet Success!!");
+      }
     }
     
     int readPacket(uint8_t *data, uint8_t total_length) {
@@ -280,26 +327,6 @@ class SerialModule : public rclcpp::Node {
             checksum = addByte(checksum, rxpacket[i]);
           checksum = ~checksum;
           
-          /*
-          checksum = ~(uint8_t)(rxpacket[0]
-                              + rxpacket[1]
-                              + rxpacket[2]
-                              + rxpacket[3]
-                              + rxpacket[4]
-                              + rxpacket[5]
-                              + rxpacket[6]
-                              + rxpacket[7]
-                              + rxpacket[8]
-                              + rxpacket[9]
-                              + rxpacket[10]
-                              + rxpacket[11]
-                              + rxpacket[12]
-                              + rxpacket[13]
-                              + rxpacket[14]
-                              + rxpacket[15]
-                              + rxpacket[16]);
-          */
-          
           if (rxpacket[total_length-1] != checksum)
           {
             RCLCPP_DEBUG(this->get_logger(), "rxpacket[total_length-1]: %u", rxpacket[total_length-1]);
@@ -328,12 +355,19 @@ class SerialModule : public rclcpp::Node {
       
       return a;
     }
-    
+  
+  float person_length_ = 0.0;
+  float person_degree_ = 0.0;  
+  double max_elapsed = 0.0;
+  float pre_FX = 0.0;
+  float pre_FY = 0.0;
+  float pre_FZ = 0.0;
   int mode_ = 0;
-  int pre_mode_ = -1;
+  int pre_mode_ = 0;
   int serial_port;
   struct pollfd fds[1];
   rclcpp::Publisher<result_msgs::msg::Force>::SharedPtr force_info_pub_;
+  rclcpp::Subscription<result_msgs::msg::Person>::SharedPtr person_info_sub_;
   rclcpp::Subscription<result_msgs::msg::Mode>::SharedPtr mode_sub_;
   rclcpp::TimerBase::SharedPtr tx_timer_;
   rclcpp::TimerBase::SharedPtr rx_timer_;
@@ -346,3 +380,4 @@ int main(int argc, char** argv) {
   rclcpp::shutdown();
   return 0;
 }
+

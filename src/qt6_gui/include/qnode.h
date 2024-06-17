@@ -11,9 +11,11 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include "result_msgs/msg/mode.hpp"
+#include "result_msgs/msg/bbox.hpp"
 #include "result_msgs/msg/force.hpp"
 #include <sensor_msgs/msg/image.hpp>
 #include <opencv2/opencv.hpp>
+#include <cv_bridge/cv_bridge.h>
 
 class qnode : public QThread
 {
@@ -27,8 +29,8 @@ public:
 private:
     std::shared_ptr<rclcpp::Node> node_;
     rclcpp::Publisher<result_msgs::msg::Mode>::SharedPtr mode_pub_;
-    rclcpp::Subscription<result_msgs::msg::Force>::SharedPtr force_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
+    rclcpp::Subscription<result_msgs::msg::Force>::SharedPtr force_sub_;
     rclcpp::TimerBase::SharedPtr timer_;
     QLabel* image_label_;
     QLabel* fps_label_;
